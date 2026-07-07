@@ -254,7 +254,10 @@ export type {
 export {
   emitPrunedPnpmInstallAssets,
   readNxMigrateConfig,
+  relocatePrunedLocalPathSpec,
+  rewritePrunedLocalPathSpecifiers,
   stripPrunedLockfilePnpmConfig,
+  warnUnshippableLocalPathSpec,
   writePrunedPnpmInstallSettings,
 } from './utils/package-json';
 export type { PackageManagerCommands } from './utils/package-manager';
