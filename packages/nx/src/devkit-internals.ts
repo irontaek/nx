@@ -142,6 +142,7 @@ export {
 export { createNxCloudOnboardingURL } from './nx-cloud/utilities/url-shorten';
 export {
   createLockFile,
+  createPrunedLockfile,
   getLockFileName,
 } from './plugins/js/lock-file/lock-file';
 export {
@@ -255,9 +256,7 @@ export {
   emitPrunedPnpmInstallAssets,
   readNxMigrateConfig,
   relocatePrunedLocalPathSpec,
-  rewritePrunedLocalPathSpecifiers,
   stripPrunedLockfilePnpmConfig,
-  validatePrunedLocalPathClosure,
   warnUnshippableLocalPathSpec,
   writePrunedPnpmInstallSettings,
 } from './utils/package-json';
