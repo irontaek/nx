@@ -145,6 +145,7 @@ export {
   type TasksRunner,
   type UnregisterCallback,
   WholeFileChange,
+  adaptSpawnForWindowsShim,
   buildProjectGraphAndSourceMapsWithoutDaemon,
   calculateFileChanges,
   calculateReverseDeps,
