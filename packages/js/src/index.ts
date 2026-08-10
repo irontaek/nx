@@ -20,8 +20,6 @@ export { isValidVariable } from './utils/is-valid-variable';
 export {
   createLockFile,
   createPackageJson,
-  createPrunedLockfile,
-  emitPrunedPnpmInstallAssets,
+  generatePrunedDeployOutput,
   getLockFileName,
-  writePrunedPnpmInstallSettings,
 } from '@nx/devkit/internal';

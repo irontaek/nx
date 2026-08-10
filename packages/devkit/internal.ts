@@ -158,7 +158,6 @@ export {
   createPackageJson,
   createProjectGraphAndSourceMapsAsync,
   createProjectRootMappings,
-  createPrunedLockfile,
   createRunManyDynamicOutputRenderer,
   createTaskId,
   daemonClient,
@@ -167,7 +166,6 @@ export {
   deriveGroupNameFromTarget,
   directoryExists,
   dropEmptyPeerDependencySections,
-  emitPrunedPnpmInstallAssets,
   expandDependencyConfigSyntaxSugar,
   expandInitiatingTasksThroughNoop,
   expandWildcardTargetConfiguration,
@@ -182,6 +180,7 @@ export {
   findProjectForPath,
   findProjectsNpmDependencies,
   forceRegisterEsmLoader,
+  generatePrunedDeployOutput,
   getCliPath,
   getCustomHasher,
   getDependencyConfigs,
@@ -261,7 +260,6 @@ export {
   warnUnshippableLocalPathSpec,
   workspaceDataDirectory,
   workspaceRootInner,
-  writePrunedPnpmInstallSettings,
 } from 'nx/src/devkit-internals';
 
 // Release runtime values (releasePublish, releaseVersion, VersionActions) are

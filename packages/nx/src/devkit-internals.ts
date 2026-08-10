@@ -142,7 +142,7 @@ export {
 export { createNxCloudOnboardingURL } from './nx-cloud/utilities/url-shorten';
 export {
   createLockFile,
-  createPrunedLockfile,
+  generatePrunedDeployOutput,
   getLockFileName,
 } from './plugins/js/lock-file/lock-file';
 export {
@@ -255,11 +255,9 @@ export type {
 export { readNxMigrateConfig } from './utils/package-json';
 export {
   dropEmptyPeerDependencySections,
-  emitPrunedPnpmInstallAssets,
   movePeerDependencyToDependencies,
   relocatePrunedLocalPathSpec,
   warnUnshippableLocalPathSpec,
-  writePrunedPnpmInstallSettings,
 } from './plugins/js/lock-file/pruned-output';
 export type { PackageManagerCommands } from './utils/package-manager';
 // Sourced from the leaf module rather than ./utils/plugins: the barrel index
