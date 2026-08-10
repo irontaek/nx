@@ -145,3 +145,48 @@ describe('exec gradle', () => {
     });
   });
 });
+
+describe('execGradleAsync', () => {
+  afterEach(() => {
+    jest.resetModules();
+    jest.restoreAllMocks();
+  });
+
+  function loadWithMockedExecFile() {
+    let captured: any;
+    jest.doMock('node:child_process', () => ({
+      ...jest.requireActual('node:child_process'),
+      execFile: jest.fn((binary, args, options) => {
+        captured = { binary, args, options };
+        const cp: any = new (require('events').EventEmitter)();
+        cp.stdout = new (require('events').EventEmitter)();
+        cp.stderr = new (require('events').EventEmitter)();
+        setImmediate(() => cp.emit('exit', 0, null));
+        return cp;
+      }),
+    }));
+    const { execGradleAsync } = require('./exec-gradle');
+    return { execGradleAsync, getCaptured: () => captured };
+  }
+
+  // NXC-4659: gradle plugin options are interpolated into `-Pkey=value`, so a
+  // shell here would make nx.json command-injectable.
+  it('should pass args literally without a shell', async () => {
+    const { execGradleAsync, getCaptured } = loadWithMockedExecFile();
+    const malicious = '-PtargetNamePrefix=x; touch /tmp/pwned';
+
+    await execGradleAsync('/ws/gradlew', ['nxProjectGraph', malicious]);
+
+    const captured = getCaptured();
+    expect(captured.options.shell).toBeFalsy();
+    expect(captured.args).toEqual(['nxProjectGraph', malicious]);
+  });
+
+  it('should drop empty args the shell used to swallow', async () => {
+    const { execGradleAsync, getCaptured } = loadWithMockedExecFile();
+
+    await execGradleAsync('/ws/gradlew', ['nxProjectGraph', '']);
+
+    expect(getCaptured().args).toEqual(['nxProjectGraph']);
+  });
+});

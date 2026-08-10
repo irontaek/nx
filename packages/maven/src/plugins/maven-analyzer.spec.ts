@@ -1,5 +1,5 @@
 import { runMavenAnalysis } from './maven-analyzer';
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import { existsSync } from 'fs';
 import { readJsonFile } from '@nx/devkit';
 import { EventEmitter } from 'events';
@@ -20,7 +20,7 @@ describe('Maven Analyzer', () => {
     jest.clearAllMocks();
     (existsSync as jest.Mock).mockReturnValue(true);
     // Mock mvnd detection to fail by default, so tests use mvnw/mvn
-    (execSync as jest.Mock).mockImplementation(() => {
+    (execFileSync as jest.Mock).mockImplementation(() => {
       throw new Error('mvnd not found');
     });
   });
@@ -163,13 +163,16 @@ describe('Maven Analyzer', () => {
 
       await promise;
 
-      expect(spawn).toHaveBeenCalledWith(
-        'mvnw.cmd',
-        expect.any(Array),
-        expect.any(Object)
-      );
-
       Object.defineProperty(process, 'platform', { value: originalPlatform });
+
+      // Node cannot spawn a .cmd directly without a shell, so the wrapper is
+      // routed through cmd.exe with verbatim (caret-escaped) arguments.
+      const [binary, args, options] = (spawn as jest.Mock).mock.calls[0];
+      expect(binary).toMatch(/cmd\.exe$/i);
+      expect(args.slice(0, 3)).toEqual(['/d', '/s', '/c']);
+      expect(args[3]).toContain('mvnw.cmd');
+      expect(options.windowsVerbatimArguments).toBe(true);
+      expect(options.shell).toBeFalsy();
     });
 
     it('should fallback to mvn when wrapper is not available', async () => {
@@ -330,6 +333,37 @@ describe('Maven Analyzer', () => {
       expect(readJsonFile).toHaveBeenCalledWith(
         expect.stringContaining('nx-maven-projects.json')
       );
+    });
+  });
+
+  describe('command injection (NXC-4659)', () => {
+    it('should pass targetNamePrefix as a literal argument, never through a shell', async () => {
+      const mockChild = new EventEmitter() as any;
+      mockChild.stdout = new EventEmitter();
+      mockChild.stderr = new EventEmitter();
+      mockChild.pid = 1234;
+
+      (spawn as jest.Mock).mockReturnValue(mockChild);
+      (readJsonFile as jest.Mock).mockReturnValue({
+        projects: [],
+        generatedAt: Date.now(),
+      });
+
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+
+      const malicious = 'x; touch /tmp/pwned';
+      const promise = runMavenAnalysis(workspaceRoot, {
+        targetNamePrefix: malicious,
+      });
+      setImmediate(() => mockChild.emit('close', 0));
+      await promise;
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+
+      const [, args, options] = (spawn as jest.Mock).mock.calls[0];
+      expect(options.shell).toBeFalsy();
+      expect(args).toContain(`-DtargetNamePrefix=${malicious}`);
     });
   });
 });

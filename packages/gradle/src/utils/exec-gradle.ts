@@ -8,7 +8,11 @@ import { existsSync } from 'node:fs';
 import { dirname, join, isAbsolute } from 'node:path';
 import { GradlePluginOptions } from '../plugin/utils/gradle-plugin-options';
 import treeKill from 'tree-kill';
-import { LARGE_BUFFER, signalToCode } from '@nx/devkit/internal';
+import {
+  adaptSpawnForWindowsShim,
+  LARGE_BUFFER,
+  signalToCode,
+} from '@nx/devkit/internal';
 
 export const fileSeparator = process.platform.startsWith('win')
   ? 'file:///'
@@ -43,22 +47,30 @@ export function execGradleAsync(
   const { signal, ...restOptions } = execOptions;
 
   return new Promise<Buffer>((res, rej: (stdout: Buffer) => void) => {
-    const cp = execFile(
+    // No shell: `args` carry nx.json plugin options straight into `-Pkey=value`,
+    // so a shell would make those options command-injectable.
+    // The shell used to swallow empty-string args; without it they would reach
+    // gradle as literal empty arguments.
+    const adapted = adaptSpawnForWindowsShim(
       gradleBinaryPath,
-      args,
+      args.filter(Boolean),
       {
         cwd: dirname(gradleBinaryPath),
-        shell: true,
         windowsHide: true,
         env: process.env,
         maxBuffer: LARGE_BUFFER,
         ...restOptions,
-      },
+      }
+    );
+    const cp = execFile(
+      adapted.binary,
+      adapted.args,
+      adapted.options as ExecFileOptions,
       undefined
     );
 
     // Use tree-kill on abort to kill the entire process tree
-    // (cmd.exe → gradlew.bat → java.exe), not just the shell.
+    // (on Windows: cmd.exe → gradlew.bat → java.exe), not just the direct child.
     const onAbort = () => {
       if (cp.pid) {
         treeKill(cp.pid);

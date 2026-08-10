@@ -5,7 +5,11 @@ import { logger, readJsonFile } from '@nx/devkit';
 import { MavenAnalysisData, MavenPluginOptions } from './types';
 import { detectMavenExecutable } from '../utils/detect-maven-executable';
 import treeKill from 'tree-kill';
-import { isCI, workspaceDataDirectory } from '@nx/devkit/internal';
+import {
+  adaptSpawnForWindowsShim,
+  isCI,
+  workspaceDataDirectory,
+} from '@nx/devkit/internal';
 
 const DEFAULT_ANALYSIS_TIMEOUT_SECONDS = isCI() ? 600 : 120;
 
@@ -101,12 +105,17 @@ export async function runMavenAnalysis(
   logger.verbose(`[Maven Analyzer] Spawning Maven process...`);
   try {
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(mavenExecutable, mavenArgs, {
+      // No shell: args come from nx.json plugin options, so a shell would make
+      // values like `targetNamePrefix` command-injectable.
+      const adapted = adaptSpawnForWindowsShim(mavenExecutable, mavenArgs, {
         cwd: workspaceRoot,
         windowsHide: true,
-        shell: true,
         stdio: 'pipe', // Always use pipe so we can control output
       });
+      // Local alias so `@nx/workspace-require-windows-hide` sees a tracked
+      // Identifier instead of a member expression; windowsHide is set above.
+      const spawnOptions = adapted.options;
+      const child = spawn(adapted.binary, adapted.args, spawnOptions);
 
       // Use tree-kill on abort to kill the entire process tree
       const onAbort = () => {
