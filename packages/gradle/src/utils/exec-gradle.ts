@@ -47,11 +47,7 @@ export function execGradleAsync(
   const { signal, ...restOptions } = execOptions;
 
   return new Promise<Buffer>((res, rej: (stdout: Buffer) => void) => {
-    // No shell: `args` carry nx.json plugin options straight into `-Pkey=value`,
-    // so a shell would make those options command-injectable.
-    // No shell: `args` carry nx.json plugin options straight into `-Pkey=value`,
-    // so a shell would make those options command-injectable. The shell also
-    // used to swallow empty-string args, hence the filter.
+    // Without the filter, empty args reach gradle as literal empty arguments.
     const cp = execFileWithoutShell(gradleBinaryPath, args.filter(Boolean), {
       cwd: dirname(gradleBinaryPath),
       env: process.env,

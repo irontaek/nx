@@ -3,7 +3,6 @@ import { join } from 'path';
 import { logger } from '@nx/devkit';
 import { execFileSyncWithoutShell } from '@nx/devkit/internal';
 
-// Cache Maven version to avoid repeated process spawns
 let cachedMavenVersion: string | null = null;
 
 /**

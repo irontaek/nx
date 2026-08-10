@@ -10,16 +10,10 @@ import {
 import { extname } from 'path';
 
 /**
- * Spawn a process without a shell.
- *
- * Prefer these over calling `child_process` directly whenever the arguments
- * carry workspace configuration: a shell would make those values executable.
- * Callers that genuinely need shell semantics — running a user-authored
- * command string — should not use these.
- *
- * Node cannot execute `.cmd` / `.bat` shims directly, which is the usual reason
- * callers reach for `shell: true`; these route such shims through
- * `cmd.exe /d /s /c` with escaped, verbatim arguments instead.
+ * Spawn without a shell, routing Windows `.cmd` / `.bat` shims through
+ * `cmd.exe` so they stay launchable. Use these wherever arguments carry
+ * workspace configuration; a caller running a user-authored command string
+ * wants a shell and should not.
  */
 export function spawnWithoutShell(
   binary: string,
@@ -61,10 +55,6 @@ export function execFileSyncWithoutShell(
   });
 }
 
-/**
- * Rewrites a call so it is spawnable without a shell. On non-Windows, and for
- * binaries that are not `.cmd` / `.bat`, this only resolves the binary.
- */
 function resolveTarget<T extends object>(
   binary: string,
   args: readonly string[],
@@ -93,10 +83,8 @@ function resolveTarget<T extends object>(
 }
 
 /**
- * A bare name like `mvn` is a `.cmd` shim on Windows; without a shell only the
- * PATHEXT-resolved path is spawnable (`which` handles PATHEXT). Returns the
- * input unchanged when it is already a path, already has an extension, or is
- * not found on PATH.
+ * A bare name like `mvn` is a `.cmd` shim on Windows, and without a shell only
+ * the PATHEXT-resolved path is spawnable.
  */
 function resolveWindowsBinary(binary: string): string {
   if (extname(binary) || binary.includes('/') || binary.includes('\\')) {
@@ -109,8 +97,7 @@ function resolveWindowsBinary(binary: string): string {
 
 const CMD_META_CHARS = /([()\][%!^"`<>&|;, ])/g;
 
-// Backslash-escape embedded quotes per MS C runtime convention, wrap in
-// quotes, then caret-escape cmd.exe metacharacters.
+// Embedded quotes follow the MS C runtime backslash convention.
 function escapeCmdArg(arg: string): string {
   const quoted = `"${arg
     .replace(/(\\*)"/g, '$1$1\\"')

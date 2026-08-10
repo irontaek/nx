@@ -721,8 +721,8 @@ describe('runAgentic', () => {
         handoffFilePath,
       });
 
-      // Adapter behavior is covered by windows-shim.spec.ts; here we only
-      // verify runAgentic actually routes through it.
+      // Escaping is covered by spawn-without-shell.spec.ts; here we only
+      // verify runAgentic routes through it.
       const [binary, args] = mockSpawn.mock.calls[0];
       expect(binary).toMatch(/cmd\.exe$/i);
       expect(args.slice(0, 3)).toEqual(['/d', '/s', '/c']);

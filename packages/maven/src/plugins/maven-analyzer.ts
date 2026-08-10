@@ -104,8 +104,6 @@ export async function runMavenAnalysis(
   logger.verbose(`[Maven Analyzer] Spawning Maven process...`);
   try {
     await new Promise<void>((resolve, reject) => {
-      // No shell: args come from nx.json plugin options, so a shell would make
-      // values like `targetNamePrefix` command-injectable.
       const child = spawnWithoutShell(mavenExecutable, mavenArgs, {
         cwd: workspaceRoot,
         stdio: 'pipe', // Always use pipe so we can control output

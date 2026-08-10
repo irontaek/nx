@@ -165,8 +165,6 @@ describe('Maven Analyzer', () => {
 
       Object.defineProperty(process, 'platform', { value: originalPlatform });
 
-      // Node cannot spawn a .cmd directly without a shell, so the wrapper is
-      // routed through cmd.exe with verbatim (caret-escaped) arguments.
       const [binary, args, options] = (spawn as jest.Mock).mock.calls[0];
       expect(binary).toMatch(/cmd\.exe$/i);
       expect(args.slice(0, 3)).toEqual(['/d', '/s', '/c']);
