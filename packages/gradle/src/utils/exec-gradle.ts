@@ -3,13 +3,13 @@ import {
   NxJsonConfiguration,
   workspaceRoot,
 } from '@nx/devkit';
-import { ExecFileOptions, execFile } from 'node:child_process';
+import { ExecFileOptions } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join, isAbsolute } from 'node:path';
 import { GradlePluginOptions } from '../plugin/utils/gradle-plugin-options';
 import treeKill from 'tree-kill';
 import {
-  adaptSpawnForWindowsShim,
+  execFileWithoutShell,
   LARGE_BUFFER,
   signalToCode,
 } from '@nx/devkit/internal';
@@ -49,25 +49,15 @@ export function execGradleAsync(
   return new Promise<Buffer>((res, rej: (stdout: Buffer) => void) => {
     // No shell: `args` carry nx.json plugin options straight into `-Pkey=value`,
     // so a shell would make those options command-injectable.
-    // The shell used to swallow empty-string args; without it they would reach
-    // gradle as literal empty arguments.
-    const adapted = adaptSpawnForWindowsShim(
-      gradleBinaryPath,
-      args.filter(Boolean),
-      {
-        cwd: dirname(gradleBinaryPath),
-        windowsHide: true,
-        env: process.env,
-        maxBuffer: LARGE_BUFFER,
-        ...restOptions,
-      }
-    );
-    const cp = execFile(
-      adapted.binary,
-      adapted.args,
-      adapted.options as ExecFileOptions,
-      undefined
-    );
+    // No shell: `args` carry nx.json plugin options straight into `-Pkey=value`,
+    // so a shell would make those options command-injectable. The shell also
+    // used to swallow empty-string args, hence the filter.
+    const cp = execFileWithoutShell(gradleBinaryPath, args.filter(Boolean), {
+      cwd: dirname(gradleBinaryPath),
+      env: process.env,
+      maxBuffer: LARGE_BUFFER,
+      ...restOptions,
+    });
 
     // Use tree-kill on abort to kill the entire process tree
     // (on Windows: cmd.exe → gradlew.bat → java.exe), not just the direct child.

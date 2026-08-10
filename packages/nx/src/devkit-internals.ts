@@ -272,4 +272,8 @@ export {
   setupWorkspaceContext,
 } from './utils/workspace-context';
 export { setWorkspaceRoot, workspaceRootInner } from './utils/workspace-root';
-export { adaptSpawnForWindowsShim } from './utils/windows-shim';
+export {
+  execFileSyncWithoutShell,
+  execFileWithoutShell,
+  spawnWithoutShell,
+} from './utils/spawn-without-shell';

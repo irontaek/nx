@@ -1,6 +1,6 @@
-import { ChildProcess, execSync, spawn } from 'child_process';
+import { ChildProcess, execSync } from 'child_process';
 import { output } from '../../../utils/output';
-import { adaptSpawnForWindowsShim } from '../../../utils/windows-shim';
+import { spawnWithoutShell } from '../../../utils/spawn-without-shell';
 import { reportMigratePrompt } from '../migrate-analytics';
 import { migratePrompt } from '../safe-prompt';
 import {
@@ -67,20 +67,13 @@ export async function runAgentic(
   } = args;
   const spec = definition.buildInteractive(invocationContext);
 
-  const adapted = adaptSpawnForWindowsShim(detected.binary, spec.args, {
-    stdio: 'inherit',
-    cwd: spec.cwd ?? invocationContext.workspaceRoot,
-    env: spec.env ? { ...process.env, ...spec.env } : process.env,
-    windowsHide: true,
-  });
-
   let child: ChildProcess;
-  // Local alias so `@nx/workspace-require-windows-hide` recognizes the
-  // options arg as a tracked Identifier rather than giving up on a
-  // member-expression skip — keeps the lint rule strict on other call sites.
-  const spawnOptions = adapted.options;
   try {
-    child = spawn(adapted.binary, adapted.args, spawnOptions);
+    child = spawnWithoutShell(detected.binary, spec.args, {
+      stdio: 'inherit',
+      cwd: spec.cwd ?? invocationContext.workspaceRoot,
+      env: spec.env ? { ...process.env, ...spec.env } : process.env,
+    });
   } catch (err) {
     return resolveFromHandoffOrPrompt(handoffFilePath, false, {
       spawnError: err instanceof Error ? err.message : String(err),

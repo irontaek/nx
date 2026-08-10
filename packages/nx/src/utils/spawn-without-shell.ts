@@ -1,22 +1,75 @@
-import { SpawnOptions } from 'child_process';
+import {
+  ChildProcess,
+  execFile,
+  ExecFileOptions,
+  execFileSync,
+  ExecFileSyncOptions,
+  spawn,
+  SpawnOptions,
+} from 'child_process';
 import { extname } from 'path';
 
 /**
- * Adapts a `spawn`/`execFile` invocation so it never needs `shell: true`.
+ * Spawn a process without a shell.
+ *
+ * Prefer these over calling `child_process` directly whenever the arguments
+ * carry workspace configuration: a shell would make those values executable.
+ * Callers that genuinely need shell semantics — running a user-authored
+ * command string — should not use these.
  *
  * Node cannot execute `.cmd` / `.bat` shims directly, which is the usual reason
- * callers reach for `shell: true` — and that turns every argument into shell
- * source. This wraps such shims in `cmd.exe /d /s /c` with
- * `windowsVerbatimArguments` so quoting follows the cmd.exe convention rather
- * than Node's default cooking, letting callers pass args as an array.
- *
- * On non-Windows, or for binaries that are not shims, this is a passthrough.
+ * callers reach for `shell: true`; these route such shims through
+ * `cmd.exe /d /s /c` with escaped, verbatim arguments instead.
  */
-export function adaptSpawnForWindowsShim(
+export function spawnWithoutShell(
   binary: string,
   args: readonly string[],
-  options: SpawnOptions
-): { binary: string; args: string[]; options: SpawnOptions } {
+  options: SpawnOptions = {}
+): ChildProcess {
+  const target = resolveTarget(binary, args, options);
+  return spawn(target.binary, target.args, {
+    ...target.options,
+    windowsHide: true,
+  });
+}
+
+export function execFileWithoutShell(
+  binary: string,
+  args: readonly string[],
+  options: ExecFileOptions = {}
+): ChildProcess {
+  const target = resolveTarget(binary, args, options);
+  return execFile(
+    target.binary,
+    target.args,
+    { ...target.options, windowsHide: true },
+    undefined
+  );
+}
+
+export function execFileSyncWithoutShell(
+  binary: string,
+  args: readonly string[],
+  options: Omit<ExecFileSyncOptions, 'encoding'> = {}
+): string {
+  const target = resolveTarget(binary, args, options);
+  return execFileSync(target.binary, target.args, {
+    stdio: 'pipe',
+    ...target.options,
+    windowsHide: true,
+    encoding: 'utf-8',
+  });
+}
+
+/**
+ * Rewrites a call so it is spawnable without a shell. On non-Windows, and for
+ * binaries that are not `.cmd` / `.bat`, this only resolves the binary.
+ */
+function resolveTarget<T extends object>(
+  binary: string,
+  args: readonly string[],
+  options: T
+): { binary: string; args: string[]; options: T } {
   if (process.platform !== 'win32') {
     return { binary, args: [...args], options };
   }

@@ -1,8 +1,7 @@
 import { existsSync } from 'fs';
-import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { logger } from '@nx/devkit';
-import { adaptSpawnForWindowsShim } from '@nx/devkit/internal';
+import { execFileSyncWithoutShell } from '@nx/devkit/internal';
 
 // Cache Maven version to avoid repeated process spawns
 let cachedMavenVersion: string | null = null;
@@ -17,7 +16,7 @@ export function detectMavenVersion(workspaceRoot: string): string | null {
 
   const executable = detectMavenExecutable(workspaceRoot);
   try {
-    const output = execFileSyncNoShell(executable, ['--version'], {
+    const output = execFileSyncWithoutShell(executable, ['--version'], {
       cwd: workspaceRoot,
     });
     // Parse version from output like "Apache Maven 4.0.0-rc-4" or "Apache Maven 3.9.9"
@@ -47,7 +46,7 @@ export function isMaven4(workspaceRoot: string): boolean {
 export function detectMavenExecutable(workspaceRoot: string): string {
   // First priority: Check for Maven Daemon
   try {
-    execFileSyncNoShell('mvnd', ['--version']);
+    execFileSyncWithoutShell('mvnd', ['--version']);
     logger.verbose(`[Maven] Found Maven Daemon, using: mvnd`);
     return 'mvnd';
   } catch {
@@ -72,25 +71,4 @@ export function detectMavenExecutable(workspaceRoot: string): string {
   // Fallback: Use regular Maven
   logger.verbose(`[Maven] Using fallback: mvn`);
   return 'mvn';
-}
-
-// Never runs through a shell: `executable` may be a workspace-controlled
-// wrapper path, and the Windows shim adapter covers mvn/mvnw's .cmd form.
-function execFileSyncNoShell(
-  executable: string,
-  args: string[],
-  options: { cwd?: string } = {}
-): string {
-  const adapted = adaptSpawnForWindowsShim(executable, args, {
-    ...options,
-    windowsHide: true,
-  });
-  // Local alias so `@nx/workspace-require-windows-hide` sees a tracked
-  // Identifier instead of a member expression; windowsHide is set above.
-  const execOptions = {
-    ...(adapted.options as object),
-    stdio: 'pipe' as const,
-    encoding: 'utf-8' as const,
-  };
-  return execFileSync(adapted.binary, adapted.args, execOptions);
 }
