@@ -41,19 +41,17 @@ export function adaptSpawnForWindowsShim(
 
 /**
  * A bare name like `mvn` is a `.cmd` shim on Windows; without a shell only the
- * PATHEXT-resolved path is spawnable. Returns the input unchanged when it
- * already has an extension or cannot be resolved.
+ * PATHEXT-resolved path is spawnable (`which` handles PATHEXT). Returns the
+ * input unchanged when it is already a path, already has an extension, or is
+ * not found on PATH.
  */
 function resolveWindowsBinary(binary: string): string {
-  if (extname(binary)) {
+  if (extname(binary) || binary.includes('/') || binary.includes('\\')) {
     return binary;
   }
-  try {
-    const which = require('which');
-    return which.sync(binary, { nothrow: true }) ?? binary;
-  } catch {
-    return binary;
-  }
+  // Required lazily so non-Windows graph construction never loads it.
+  const which = require('which');
+  return which.sync(binary, { nothrow: true }) ?? binary;
 }
 
 const CMD_META_CHARS = /([()\][%!^"`<>&|;, ])/g;

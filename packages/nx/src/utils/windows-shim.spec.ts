@@ -1,4 +1,7 @@
 import { adaptSpawnForWindowsShim } from './windows-shim';
+import which from 'which';
+
+jest.mock('which', () => ({ sync: jest.fn() }));
 
 describe('adaptSpawnForWindowsShim', () => {
   const originalPlatform = process.platform;
@@ -74,5 +77,44 @@ describe('adaptSpawnForWindowsShim', () => {
     delete process.env.comspec;
     const out = adaptSpawnForWindowsShim('C:\\x.cmd', [], {});
     expect(out.binary).toBe('cmd.exe');
+  });
+
+  describe('bare-name resolution', () => {
+    afterEach(() => {
+      (which.sync as jest.Mock).mockReset();
+    });
+
+    // `mvn` on Windows is really mvn.cmd; without a shell only the resolved
+    // path is spawnable.
+    it('resolves a bare name through which and wraps the .cmd it finds', () => {
+      setPlatform('win32');
+      (which.sync as jest.Mock).mockReturnValue(
+        'C:\\tools\\maven\\bin\\mvn.cmd'
+      );
+
+      const out = adaptSpawnForWindowsShim('mvn', ['-v'], {});
+
+      expect(which.sync).toHaveBeenCalledWith('mvn', { nothrow: true });
+      expect(out.binary).toMatch(/cmd\.exe$/i);
+      expect(out.args[3]).toContain('mvn.cmd');
+      expect(out.options.windowsVerbatimArguments).toBe(true);
+    });
+
+    it('leaves a bare name alone when nothing on PATH matches', () => {
+      setPlatform('win32');
+      (which.sync as jest.Mock).mockReturnValue(null);
+
+      const out = adaptSpawnForWindowsShim('mvn', ['-v'], {});
+
+      expect(out.binary).toBe('mvn');
+      expect(out.options.windowsVerbatimArguments).toBeUndefined();
+    });
+
+    it('does not probe PATH for a relative path like ./mvnw', () => {
+      setPlatform('win32');
+      const out = adaptSpawnForWindowsShim('./mvnw', ['-v'], {});
+      expect(out.binary).toBe('./mvnw');
+      expect(which.sync).not.toHaveBeenCalled();
+    });
   });
 });
