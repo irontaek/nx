@@ -18,7 +18,7 @@ import { extname } from 'path';
 export function spawnWithoutShell(
   binary: string,
   args: readonly string[],
-  options: SpawnOptions = {}
+  options: Omit<SpawnOptions, 'shell'> = {}
 ): ChildProcess {
   const target = resolveTarget(binary, args, options);
   return spawn(target.binary, target.args, {
@@ -30,7 +30,7 @@ export function spawnWithoutShell(
 export function execFileWithoutShell(
   binary: string,
   args: readonly string[],
-  options: ExecFileOptions = {}
+  options: Omit<ExecFileOptions, 'shell'> = {}
 ): ChildProcess {
   const target = resolveTarget(binary, args, options);
   return execFile(
@@ -44,7 +44,7 @@ export function execFileWithoutShell(
 export function execFileSyncWithoutShell(
   binary: string,
   args: readonly string[],
-  options: Omit<ExecFileSyncOptions, 'encoding'> = {}
+  options: Omit<ExecFileSyncOptions, 'encoding' | 'shell'> = {}
 ): string {
   const target = resolveTarget(binary, args, options);
   return execFileSync(target.binary, target.args, {

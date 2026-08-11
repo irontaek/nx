@@ -40,7 +40,7 @@ export function getGradleExecFile(): string {
 export function execGradleAsync(
   gradleBinaryPath: string,
   args: ReadonlyArray<string>,
-  execOptions: ExecFileOptions = {}
+  execOptions: Omit<ExecFileOptions, 'shell'> = {}
 ): Promise<Buffer> {
   // Extract signal so we can handle cancellation with tree-kill
   // instead of Node's default which only kills the immediate child.
